@@ -1,0 +1,135 @@
+#convolution neural network for image classification
+#no pretrained base for this one
+#for this one, changed dense network from 6 to 64 and then the epochs from 30 to 50 to see how 50 epochs do because 
+#previous model with 30 epochs showed both accuracy increasing and both loss values decreasing even after epoch 30
+
+#think of data augmentation too for this model
+
+import os, warnings
+import numpy as np
+
+import pandas as pd
+import tensorflow as tf
+from tensorflow import keras
+import matplotlib.pyplot as plt
+from tensorflow.keras.utils import image_dataset_from_directory
+from tensorflow.keras import layers
+
+
+#set up reproducibility of the global environment and tensorflow
+def set_seed(seed=17):
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+    os.environ['PYTHONHASHSEED']=str(seed)
+    os.environ['TF_DETERMINISTIC_OPS']='1'
+set_seed()
+
+#plot defaults
+plt.rc('figure', autolayout=True)
+plt.rc('axes', labelweight='bold', labelsize=16,
+       titleweight='bold', titlesize=18, titlepad=10)
+plt.rc('image', cmap='magma')
+
+
+#keep it clean
+warnings.filterwarnings('ignore')
+
+#datasets path
+train_path=os.path.abspath('/Users/drstevenzeki/Simulated Genomic Binary-Class/car-or-truck/train')
+valid_path=os.path.abspath('/Users/drstevenzeki/Simulated Genomic Binary-Class/car-or-truck/valid')
+
+print (train_path)
+print()
+print(valid_path)
+print()
+
+#training and validation sets
+ds_train = image_dataset_from_directory(
+    train_path,
+    labels='inferred',
+    label_mode='binary',
+    image_size=[128,128],
+    interpolation='nearest',
+    batch_size=64,
+    shuffle=True,
+)
+
+ds_valid = image_dataset_from_directory(
+    valid_path,
+    labels='inferred',
+    label_mode='binary',
+    image_size=[128, 128],
+    interpolation='nearest',
+    batch_size=64,
+    shuffle=False,
+)
+
+#quick check before proceeding
+for images, labels in ds_train.take(1): #the 1 is give me the first batch from the dataset
+    print (f'The shape of images in the ds_train is {images.shape}')
+    print (labels.shape)
+print (ds_train.class_names)
+
+#preprocessing through normalization, changing pixel values to floating point numbers
+def convert_to_float (image, label):
+    image=tf.image.convert_image_dtype(image, dtype=tf.float32)
+    return (image, label) #returns normalized image and original label
+
+AUTOTUNE = tf.data.experimental.AUTOTUNE #"TensorFlow, you know my computer better than I do. Automatically choose how many workers and how much prefetching to use to make data loading as fast as possible."
+ds_train_ = (
+    ds_train
+    .map(convert_to_float)
+    .cache()
+    .prefetch(buffer_size=AUTOTUNE)
+)
+
+ds_valid_ = (
+    ds_valid
+    .map(convert_to_float)
+    .cache()
+    .prefetch(buffer_size=AUTOTUNE)
+)
+
+#define the model
+model = keras.Sequential([
+    #block one
+    layers.Conv2D(filters=32, kernel_size=3, activation='relu', padding='same',
+                  input_shape=[128,128,3]),
+    layers.MaxPool2D(),
+
+    #block two
+    layers.Conv2D(filters=64, kernel_size=3, activation='relu', padding='same'),
+    layers.MaxPool2D(),
+
+    #block three
+    layers.Conv2D(filters=128, kernel_size=3, activation='relu', padding='same'),
+    layers.Conv2D(filters=128, kernel_size=3, activation='relu', padding='same'),
+    layers.MaxPool2D(),
+
+    #attach the head
+    layers.GlobalAveragePooling2D(), #instead of layers.Flatten() to make it faster, fewer parameters, generalize better
+    layers.Dense(64, activation='relu'), #try and change the 6 to 64 and check the accuracy and loss
+    
+    layers.Dense(1, activation='sigmoid'),
+])
+
+model.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['binary_accuracy'],
+)
+
+history = model.fit(
+  ds_train_,
+  validation_data=ds_valid_,
+  epochs=50,
+  verbose=1,
+)
+
+history_df=pd.DataFrame (history.history)
+history_df.loc[:,['loss', 'val_loss']].plot()
+history_df.loc[:,['binary_accuracy', 'val_binary_accuracy']].plot();
+
+model.summary()
+
+#this one took ~51 minutes to run      
