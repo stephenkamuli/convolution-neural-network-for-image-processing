@@ -3,7 +3,7 @@
 #for this one, changed dense network from 6 to 64 and then the epochs from 30 to 50 to see how 50 epochs do because 
 #previous model with 30 epochs showed both accuracy increasing and both loss values decreasing even after epoch 30
 
-#think of data augmentation too for this model
+#think of data augmentation for this model to see if the accuracy and validation confidence (loss) improve
 
 import os, warnings
 import numpy as np
