@@ -35,8 +35,8 @@ plt.rc('image', cmap='magma')
 warnings.filterwarnings('ignore')
 
 #datasets path
-train_path=os.path.abspath('/Users/drstevenzeki/Simulated Genomic Binary-Class/car-or-truck/train')
-valid_path=os.path.abspath('/Users/drstevenzeki/Simulated Genomic Binary-Class/car-or-truck/valid')
+train_path=os.path.abspath('train-directory-path')
+valid_path=os.path.abspath('valid-directory-path')
 
 print (train_path)
 print()
